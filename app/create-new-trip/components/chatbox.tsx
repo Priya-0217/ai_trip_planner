@@ -1,8 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Bot, User, Send, Loader2, Sparkles, Compass } from "lucide-react"
+import { Bot, User, Send, Loader2 } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import axios from "axios"
 
@@ -17,6 +16,10 @@ type Message = {
   ui?: string
 }
 
+type ChatBoxProps = {
+  setTripData: (data: any) => void
+}
+
 const loadingMessages = [
   "✨ Planning your dream trip...",
   "🗺️ Exploring destinations...",
@@ -26,506 +29,297 @@ const loadingMessages = [
   "🎨 Crafting your itinerary...",
 ]
 
-export default function ChatBox() {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [userInput, setUserInput] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [loadingText, setLoadingText] = useState(loadingMessages[0])
+/* ─── Animated floating blobs ─── */
+const BgBlobs = ({ dark }: { dark: boolean }) => {
+  if (!dark) {
+    return (
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <div style={{ position:"absolute", top:"-18%", left:"-12%", width:520, height:520, borderRadius:"50%",
+          background:"radial-gradient(circle, rgba(251,146,60,.38) 0%, transparent 68%)", filter:"blur(42px)",
+          animation:"drift1 18s ease-in-out infinite alternate" }} />
+        <div style={{ position:"absolute", top:"28%", left:"20%", width:440, height:440, borderRadius:"50%",
+          background:"radial-gradient(circle, rgba(167,139,250,.32) 0%, transparent 68%)", filter:"blur(52px)",
+          animation:"drift2 22s ease-in-out infinite alternate" }} />
+        <div style={{ position:"absolute", bottom:"-12%", right:"-10%", width:480, height:480, borderRadius:"50%",
+          background:"radial-gradient(circle, rgba(56,189,248,.30) 0%, transparent 68%)", filter:"blur(46px)",
+          animation:"drift3 20s ease-in-out infinite alternate" }} />
+        <div style={{ position:"absolute", bottom:"8%", left:"-6%", width:320, height:320, borderRadius:"50%",
+          background:"radial-gradient(circle, rgba(52,211,153,.24) 0%, transparent 68%)", filter:"blur(36px)",
+          animation:"drift1 25s ease-in-out infinite alternate-reverse" }} />
+      </div>
+    )
+  }
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+      <div style={{ position:"absolute", top:"-22%", left:"8%", width:540, height:540, borderRadius:"50%",
+        background:"radial-gradient(circle, rgba(99,102,241,.28) 0%, transparent 68%)", filter:"blur(56px)",
+        animation:"drift2 20s ease-in-out infinite alternate" }} />
+      <div style={{ position:"absolute", bottom:"-18%", left:"-12%", width:500, height:500, borderRadius:"50%",
+        background:"radial-gradient(circle, rgba(16,185,129,.22) 0%, transparent 68%)", filter:"blur(52px)",
+        animation:"drift3 24s ease-in-out infinite alternate" }} />
+      <div style={{ position:"absolute", top:"38%", right:"-14%", width:420, height:420, borderRadius:"50%",
+        background:"radial-gradient(circle, rgba(244,63,94,.20) 0%, transparent 68%)", filter:"blur(46px)",
+        animation:"drift1 19s ease-in-out infinite alternate-reverse" }} />
+      <div style={{ position:"absolute", top:"-6%", right:"-6%", width:340, height:340, borderRadius:"50%",
+        background:"radial-gradient(circle, rgba(139,92,246,.24) 0%, transparent 68%)", filter:"blur(42px)",
+        animation:"drift2 21s ease-in-out infinite alternate" }} />
+    </div>
+  )
+}
+
+/* ─── AI bubble styles (frosted teal) ─── */
+const aiBubbleLight: React.CSSProperties = {
+  background: "rgba(204,251,252,0.52)",
+  backdropFilter: "blur(14px)",
+  WebkitBackdropFilter: "blur(14px)",
+  border: "1px solid rgba(103,232,249,0.42)",
+  boxShadow: "0 2px 12px rgba(6,182,212,0.10)"
+}
+
+const aiBubbleDark: React.CSSProperties = {
+  background: "rgba(21,55,65,0.68)",
+  backdropFilter: "blur(14px)",
+  WebkitBackdropFilter: "blur(14px)",
+  border: "1px solid rgba(103,232,249,0.25)",
+  boxShadow: "0 2px 12px rgba(6,182,212,0.15)"
+}
+
+/* ─── Input bar styles (frosted) ─── */
+const inputBarLight: React.CSSProperties = {
+  background: "rgba(255,255,255,0.58)",
+  backdropFilter: "blur(20px)",
+  WebkitBackdropFilter: "blur(20px)",
+  border: "1px solid rgba(167,139,250,0.28)",
+  boxShadow: "0 8px 30px rgba(167,139,250,0.13)"
+}
+
+const inputBarDark: React.CSSProperties = {
+  background: "rgba(22,27,34,0.72)",
+  backdropFilter: "blur(20px)",
+  WebkitBackdropFilter: "blur(20px)",
+  border: "1px solid rgba(99,102,241,0.25)",
+  boxShadow: "0 8px 30px rgba(99,102,241,0.14)"
+}
+
+export default function ChatBox({ setTripData }: ChatBoxProps) {
+  const [messages, setMessages]           = useState<Message[]>([])
+  const [userInput, setUserInput]         = useState("")
+  const [isLoading, setIsLoading]         = useState(false)
+  const [loadingText, setLoadingText]     = useState(loadingMessages[0])
   const [renderedUiIds, setRenderedUiIds] = useState<Set<number>>(new Set())
-  const [isDark, setIsDark] = useState(false)
+  const [tripGenerated, setTripGenerated] = useState(false)
+  const [dark, setDark]                   = useState(false)
 
   const bottomRef = useRef<HTMLDivElement | null>(null)
 
-  /* Detect dark mode from system/parent */
+  /* detect dark class on <html> */
   useEffect(() => {
-    // Check if dark mode class exists on html or body
-    const checkDarkMode = () => {
-      const htmlElement = document.documentElement
-      const bodyElement = document.body
-      const isDarkMode =
-        htmlElement.classList.contains("dark") ||
-        bodyElement.classList.contains("dark") ||
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-      setIsDark(isDarkMode)
-    }
-
-    checkDarkMode()
-
-    // Listen for changes
-    const observer = new MutationObserver(checkDarkMode)
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    })
-    observer.observe(document.body, {
-      attributes: true,
-      attributeFilter: ["class"],
-    })
-
-    // Listen for system preference changes
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-    const handleChange = () => checkDarkMode()
-    mediaQuery.addEventListener("change", handleChange)
-
-    return () => {
-      observer.disconnect()
-      mediaQuery.removeEventListener("change", handleChange)
-    }
+    const check = () => setDark(document.documentElement.classList.contains("dark"))
+    check()
+    const obs = new MutationObserver(check)
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
+    return () => obs.disconnect()
   }, [])
 
-  /* Auto scroll */
+  /* auto scroll */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, isLoading])
 
-  /* Send Message */
+  /* ─── send ─── */
   const onSend = async (input?: string) => {
     const text = input ?? userInput
-    if (!text.trim()) return
+    if (!text.trim() || isLoading || tripGenerated) return
 
-    const userMsg: Message = { role: "user", content: text }
-    const updatedMessages = [...messages, userMsg]
-
+    const userMsg: Message  = { role: "user", content: text }
+    const updatedMessages   = [...messages, userMsg]
     setMessages(updatedMessages)
     setUserInput("")
     setIsLoading(true)
 
     const interval = setInterval(() => {
-      setLoadingText(
-        loadingMessages[Math.floor(Math.random() * loadingMessages.length)]
-      )
+      setLoadingText(loadingMessages[Math.floor(Math.random() * loadingMessages.length)])
     }, 1500)
 
     try {
-      const res = await axios.post("/api/aimodel", {
-        messages: updatedMessages,
-      })
+      const res  = await axios.post("/api/aimodel", { messages: updatedMessages })
+      const data = res.data
 
-      const newMessage = {
-        role: "assistant" as const,
-        content: res.data?.resp || "Sorry, I couldn't respond.",
-        ui: res.data?.ui || "final",
+      if (data?.ui === "final" && data?.trip_plan) {
+        setTripData(data.trip_plan)
+        setTripGenerated(true)
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: "✅ Your trip plan is ready! Check the details on the right 👉",
+          ui: "final"
+        }])
+        return
       }
 
-      setMessages(prev => [...prev, newMessage])
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: data?.resp || "Sorry, I couldn't respond.",
+        ui: data?.ui
+      }])
     } catch {
-      setMessages(prev => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "⚠️ AI failed to respond. Please try again later.",
-          ui: "final",
-        },
-      ])
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: "⚠️ AI failed to respond. Please try again later.",
+        ui: "final"
+      }])
     } finally {
       clearInterval(interval)
       setIsLoading(false)
     }
   }
 
-  /* Handle UI Selection */
-  const handleUiSelect = (messageIndex: number, value: string) => {
-    setRenderedUiIds(prev => new Set([...prev, messageIndex]))
+  /* ─── generative UI ─── */
+  const handleUiSelect = (idx: number, value: string) => {
+    setRenderedUiIds(prev => new Set([...prev, idx]))
     onSend(value)
   }
 
-  /* Generative UI Renderer */
-  const RenderGenerativeUi = (ui: string | undefined, messageIndex: number) => {
-    if (!ui || ui === "final" || isLoading || renderedUiIds.has(messageIndex)) {
+  const RenderGenerativeUi = (ui: string | undefined, idx: number) => {
+    if (!ui || ui === "final" || ui === "generate" || isLoading || renderedUiIds.has(idx))
       return null
-    }
-
-    if (ui === "groupSize") {
-      return (
-        <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -20, scale: 0.9 }}
-          transition={{ type: "spring", damping: 20 }}
-        >
-          <GroupSizeUi
-            onSelectedOption={(v: string) => handleUiSelect(messageIndex, v)}
-          />
-        </motion.div>
-      )
-    }
-
-    if (ui === "budget") {
-      return (
-        <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -20, scale: 0.9 }}
-          transition={{ type: "spring", damping: 20 }}
-        >
-          <BudgetUi onSelect={(v: string) => handleUiSelect(messageIndex, v)} />
-        </motion.div>
-      )
-    }
-
-    if (ui === "days") {
-      return (
-        <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -20, scale: 0.9 }}
-          transition={{ type: "spring", damping: 20 }}
-        >
-          <DaysUi
-            onSelect={(v: number) => handleUiSelect(messageIndex, v.toString())}
-          />
-        </motion.div>
-      )
-    }
-
+    if (ui === "groupSize") return <GroupSizeUi onSelectedOption={(v: string) => handleUiSelect(idx, v)} />
+    if (ui === "budget")    return <BudgetUi onSelect={v => handleUiSelect(idx, v)} />
+    if (ui === "days")      return <DaysUi onSelect={v => handleUiSelect(idx, v.toString())} />
     return null
   }
 
+  /* ─── render ─── */
   return (
-    <section
-      className={`relative min-h-screen flex flex-col transition-colors duration-500 ${
-        isDark ? "bg-slate-900" : "bg-amber-50"
-      }`}
-    >
-      {/* Light Mode - Vintage Travel Map Background */}
-      {!isDark && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {/* Vintage paper texture */}
-          <div
-            className="absolute inset-0 opacity-40"
-            style={{
-              backgroundImage: `
-                repeating-linear-gradient(
-                  0deg,
-                  rgba(139, 92, 46, 0.03) 0px,
-                  transparent 1px,
-                  transparent 2px,
-                  rgba(139, 92, 46, 0.03) 3px
-                ),
-                repeating-linear-gradient(
-                  90deg,
-                  rgba(139, 92, 46, 0.03) 0px,
-                  transparent 1px,
-                  transparent 2px,
-                  rgba(139, 92, 46, 0.03) 3px
-                )
-              `,
-            }}
-          />
+    <>
+      <style>{`
+        @keyframes drift1 { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(58px,-42px) scale(1.07)} }
+        @keyframes drift2 { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(-48px,52px) scale(1.06)} }
+        @keyframes drift3 { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(42px,54px) scale(1.09)} }
 
-          {/* Compass decorations */}
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 120, repeat: Infinity, ease: "linear" }}
-            className="absolute top-20 right-20 w-32 h-32 opacity-5"
-          >
-            <Compass className="w-full h-full text-amber-900" />
-          </motion.div>
-          <motion.div
-            animate={{ rotate: -360 }}
-            transition={{ duration: 100, repeat: Infinity, ease: "linear" }}
-            className="absolute bottom-20 left-20 w-40 h-40 opacity-5"
-          >
-            <Compass className="w-full h-full text-amber-900" />
-          </motion.div>
+        .chat-scroll::-webkit-scrollbar             { width:6px }
+        .chat-scroll::-webkit-scrollbar-track       { background:transparent }
+        .chat-scroll::-webkit-scrollbar-thumb       { background:rgba(167,139,250,.30); border-radius:3px }
+        .chat-scroll::-webkit-scrollbar-thumb:hover { background:rgba(167,139,250,.50) }
+        .dark .chat-scroll::-webkit-scrollbar-thumb       { background:rgba(99,102,241,.28) }
+        .dark .chat-scroll::-webkit-scrollbar-thumb:hover { background:rgba(99,102,241,.48) }
+      `}</style>
 
-          {/* Vintage map lines */}
-          <svg className="absolute inset-0 w-full h-full opacity-10">
-            <defs>
-              <pattern
-                id="map-grid"
-                x="0"
-                y="0"
-                width="80"
-                height="80"
-                patternUnits="userSpaceOnUse"
-              >
-                <circle cx="40" cy="40" r="1" fill="#8B5C2E" />
-                <line x1="0" y1="40" x2="80" y2="40" stroke="#8B5C2E" strokeWidth="0.5" strokeDasharray="5,5" />
-                <line x1="40" y1="0" x2="40" y2="80" stroke="#8B5C2E" strokeWidth="0.5" strokeDasharray="5,5" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#map-grid)" />
-          </svg>
+      <section
+        className="relative h-screen flex flex-col overflow-hidden"
+        style={{ background: dark ? "#0e1117" : "#faf5ff" }}
+      >
+        {/* animated blobs */}
+        <BgBlobs dark={dark} />
 
-          {/* Postage stamps */}
-          <div className="absolute top-10 left-10 w-20 h-24 border-4 border-dashed border-amber-800/20 rotate-12" />
-          <div className="absolute top-32 right-32 w-16 h-20 border-4 border-dashed border-amber-800/20 -rotate-6" />
-          <div className="absolute bottom-40 left-40 w-24 h-20 border-4 border-dashed border-amber-800/20 rotate-3" />
-        </div>
-      )}
-
-      {/* Dark Mode - Night Sky with Stars */}
-      {isDark && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {/* Starfield */}
-          {[...Array(100)].map((_, i) => (
-            <motion.div
-              key={i}
-              initial={{
-                x: Math.random() * 1200,
-                y: Math.random() * 800,
-                scale: Math.random() * 0.5 + 0.5,
-              }}
-              animate={{
-                opacity: [0.2, 1, 0.2],
-                scale: [0.8, 1.2, 0.8],
-              }}
-              transition={{
-                duration: Math.random() * 3 + 2,
-                repeat: Infinity,
-                delay: Math.random() * 2,
-              }}
-              className="absolute w-1 h-1 bg-blue-100 rounded-full"
-              style={{
-                boxShadow: "0 0 4px rgba(255,255,255,0.8)",
-              }}
-            />
-          ))}
-
-          {/* Constellations */}
-          <svg className="absolute inset-0 w-full h-full opacity-20">
-            <line x1="10%" y1="20%" x2="15%" y2="25%" stroke="#93C5FD" strokeWidth="1" />
-            <line x1="15%" y1="25%" x2="20%" y2="22%" stroke="#93C5FD" strokeWidth="1" />
-            <line x1="20%" y1="22%" x2="18%" y2="15%" stroke="#93C5FD" strokeWidth="1" />
-            <circle cx="10%" cy="20%" r="2" fill="#93C5FD" />
-            <circle cx="15%" cy="25%" r="2" fill="#93C5FD" />
-            <circle cx="20%" cy="22%" r="2" fill="#93C5FD" />
-            <circle cx="18%" cy="15%" r="2" fill="#93C5FD" />
-
-            <line x1="80%" y1="30%" x2="85%" y2="35%" stroke="#93C5FD" strokeWidth="1" />
-            <line x1="85%" y1="35%" x2="88%" y2="32%" stroke="#93C5FD" strokeWidth="1" />
-            <circle cx="80%" cy="30%" r="2" fill="#93C5FD" />
-            <circle cx="85%" cy="35%" r="2" fill="#93C5FD" />
-            <circle cx="88%" cy="32%" r="2" fill="#93C5FD" />
-          </svg>
-
-          {/* Moon */}
-          <motion.div
-            animate={{
-              y: [0, -20, 0],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-            className="absolute top-10 right-20 w-24 h-24 bg-yellow-100 rounded-full opacity-80"
-            style={{
-              boxShadow: "0 0 60px rgba(254, 243, 199, 0.6)",
-            }}
-          >
-            {/* Moon craters */}
-            <div className="absolute top-4 left-6 w-6 h-6 bg-yellow-200/50 rounded-full" />
-            <div className="absolute bottom-6 right-8 w-4 h-4 bg-yellow-200/50 rounded-full" />
-            <div className="absolute top-12 right-4 w-5 h-5 bg-yellow-200/50 rounded-full" />
-          </motion.div>
-        </div>
-      )}
-
-      {/* Messages Container */}
-      <div className="relative z-10 w-full max-w-5xl mx-auto flex-1 overflow-y-auto px-6 py-12">
-        {messages.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <Empty onSelect={t => setUserInput(t)} />
-          </motion.div>
-        ) : (
-          <div className="space-y-8 pb-4">
-            {messages.map((msg, i) => {
-              const isLast = i === messages.length - 1
-              return (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{
-                    duration: 0.4,
-                    delay: i * 0.05,
-                    type: "spring",
-                    damping: 25,
-                  }}
-                >
-                  <div
-                    className={`flex items-start gap-4 ${
-                      msg.role === "user" ? "flex-row-reverse" : "flex-row"
-                    }`}
-                  >
-                    {/* Avatar */}
-                    <motion.div
-                      whileHover={{ scale: 1.1, rotate: isDark ? -5 : 5 }}
-                      className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all ${
-                        msg.role === "assistant"
-                          ? isDark
-                            ? "bg-linear-to-br from-blue-600 to-indigo-700 border-2 border-blue-400/30"
-                            : "bg-linear-to-br from-amber-500 to-orange-600 border-2 border-amber-300"
-                          : isDark
-                          ? "bg-linear-to-br from-purple-600 to-pink-600 border-2 border-purple-400/30"
-                          : "bg-linear-to-br from-red-500 to-rose-600 border-2 border-red-300"
-                      }`}
-                    >
-                      {msg.role === "assistant" ? (
-                        <Bot className="h-6 w-6 text-white" />
-                      ) : (
-                        <User className="h-6 w-6 text-white" />
-                      )}
-                    </motion.div>
-
-                    {/* Message Bubble */}
-                    <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      className={`max-w-[70%] px-6 py-4 rounded-3xl shadow-lg transition-all ${
-                        msg.role === "user"
-                          ? isDark
-                            ? "bg-linear-to-br from-purple-600 to-pink-600 text-white border-2 border-purple-400/30"
-                            : "bg-linear-to-br from-red-500 to-rose-600 text-white border-2 border-red-300"
-                          : isDark
-                          ? "bg-slate-800 text-slate-100 border-2 border-slate-700"
-                          : "bg-white text-amber-950 border-2 border-amber-200"
-                      }`}
-                      style={{
-                        boxShadow: isDark
-                          ? msg.role === "user"
-                            ? "0 8px 32px rgba(168, 85, 247, 0.4)"
-                            : "0 8px 32px rgba(0, 0, 0, 0.6)"
-                          : msg.role === "user"
-                          ? "0 8px 32px rgba(239, 68, 68, 0.3)"
-                          : "0 8px 32px rgba(217, 119, 6, 0.2)",
-                      }}
-                    >
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                        {msg.content}
-                      </p>
-                    </motion.div>
-                  </div>
-
-                  {/* Render UI component */}
-                  <AnimatePresence mode="wait">
-                    {msg.role === "assistant" && isLast && (
-                      <div className="ml-16 mt-4">
-                        {RenderGenerativeUi(msg.ui, i)}
-                      </div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              )
-            })}
-
-            {/* Loading Indicator */}
-            {isLoading && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex items-start gap-4"
-              >
-                <div
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${
-                    isDark
-                      ? "bg-linear-to-br from-blue-600 to-indigo-700 border-2 border-blue-400/30"
-                      : "bg-linear-to-br from-amber-500 to-orange-600 border-2 border-amber-300"
-                  }`}
-                >
-                  <Bot className="h-6 w-6 text-white" />
-                </div>
-                <div
-                  className={`px-6 py-4 rounded-3xl shadow-lg flex items-center gap-3 ${
-                    isDark
-                      ? "bg-slate-800 text-slate-100 border-2 border-slate-700"
-                      : "bg-white text-amber-950 border-2 border-amber-200"
-                  }`}
-                >
-                  <Loader2
-                    className={`h-5 w-5 animate-spin ${
-                      isDark ? "text-blue-400" : "text-amber-600"
-                    }`}
-                  />
-                  <span className="text-sm">{loadingText}</span>
-                  <Sparkles
-                    className={`h-4 w-4 animate-pulse ${
-                      isDark ? "text-yellow-300" : "text-amber-500"
-                    }`}
-                  />
-                </div>
-              </motion.div>
-            )}
-
-            <div ref={bottomRef} />
-          </div>
-        )}
-      </div>
-
-      {/* Input Area */}
-      <div className="relative z-10 w-full max-w-5xl mx-auto px-6 pb-8 pt-4">
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className={`relative rounded-3xl shadow-2xl overflow-hidden transition-all ${
-            isDark
-              ? "bg-slate-800 border-2 border-slate-700"
-              : "bg-white border-2 border-amber-200"
-          }`}
-          style={{
-            boxShadow: isDark
-              ? "0 20px 60px rgba(0, 0, 0, 0.8)"
-              : "0 20px 60px rgba(217, 119, 6, 0.3)",
-          }}
-        >
-          <Textarea
-            placeholder={
-              isDark
-                ? "🌙 Where shall we explore tonight?"
-                : "☀️ Ready for your next adventure?"
-            }
-            value={userInput}
-            onChange={e => setUserInput(e.target.value)}
-            disabled={isLoading}
-            className={`min-h-30 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none pr-20 pt-6 pb-6 text-base transition-colors ${
-              isDark
-                ? "bg-transparent text-slate-100 placeholder:text-slate-500"
-                : "bg-transparent text-amber-950 placeholder:text-amber-600/50"
-            }`}
-            onKeyDown={e => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault()
-                onSend()
-              }
-            }}
-          />
-
-          <motion.button
-            onClick={() => onSend()}
-            disabled={!userInput.trim() || isLoading}
-            whileHover={{ scale: 1.05, rotate: 5 }}
-            whileTap={{ scale: 0.95 }}
-            className={`absolute bottom-5 right-5 h-14 w-14 rounded-2xl flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg ${
-              isDark
-                ? "bg-linear-to-br from-blue-600 to-indigo-700 border-2 border-blue-400/30"
-                : "bg-linear-to-br from-amber-500 to-orange-600 border-2 border-amber-300"
-            }`}
-          >
-            {isLoading ? (
-              <Loader2 className="h-6 w-6 animate-spin text-white" />
+        {/* ── messages ── */}
+        <div className="chat-scroll relative z-10 flex-1 overflow-y-auto px-4 py-8">
+          <div className="max-w-2xl mx-auto w-full">
+            {messages.length === 0 ? (
+              <Empty onSelect={t => setUserInput(t)} />
             ) : (
-              <Send className="h-6 w-6 text-white" />
-            )}
-          </motion.button>
-        </motion.div>
+              <div className="space-y-5">
+                {messages.map((msg, i) => (
+                  <div key={i}>
+                    <div className={`flex gap-3 items-end ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
 
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className={`text-center text-xs mt-4 transition-colors ${
-            isDark ? "text-slate-500" : "text-amber-700"
-          }`}
-        >
-          Press Enter to send • Shift + Enter for new line
-        </motion.p>
-      </div>
-    </section>
+                      {/* avatar */}
+                      <div
+                        className="flex-shrink-0 w-9 h-9 rounded-2xl flex items-center justify-center text-white shadow-md"
+                        style={{
+                          background: msg.role === "user"
+                            ? "linear-gradient(135deg,#ec4899,#a855f7)"
+                            : "linear-gradient(135deg,#06b6d4,#14b8a6)"
+                        }}
+                      >
+                        {msg.role === "assistant" ? <Bot size={17} /> : <User size={17} />}
+                      </div>
+
+                      {/* bubble */}
+                      <div
+                        className={`max-w-[72%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap leading-relaxed
+                          ${msg.role === "user" ? "rounded-br-sm text-white" : "rounded-bl-sm"}
+                          ${msg.role !== "user" ? (dark ? "text-gray-100" : "text-gray-800") : ""}`}
+                        style={
+                          msg.role === "user"
+                            ? { background:"linear-gradient(135deg,#ec4899,#a855f7)", boxShadow:"0 2px 10px rgba(168,85,247,.25)" }
+                            : (dark ? aiBubbleDark : aiBubbleLight)
+                        }
+                      >
+                        {msg.content}
+                      </div>
+                    </div>
+
+                    {/* generative UI */}
+                    {msg.role === "assistant" && (
+                      <div className="ml-12 mt-2">{RenderGenerativeUi(msg.ui, i)}</div>
+                    )}
+                  </div>
+                ))}
+
+                {/* loading bubble */}
+                {isLoading && (
+                  <div className="flex gap-3 items-end">
+                    <div
+                      className="flex-shrink-0 w-9 h-9 rounded-2xl flex items-center justify-center text-white shadow-md"
+                      style={{ background:"linear-gradient(135deg,#06b6d4,#14b8a6)" }}
+                    >
+                      <Loader2 size={17} className="animate-spin" />
+                    </div>
+                    <div
+                      className={`px-4 py-2.5 rounded-2xl rounded-bl-sm text-sm flex items-center gap-3 ${dark ? "text-gray-300" : "text-gray-600"}`}
+                      style={dark ? aiBubbleDark : aiBubbleLight}
+                    >
+                      <span className="flex gap-1.5 items-center">
+                        <span className="inline-block w-2 h-2 rounded-full bg-cyan-400" style={{ animation:"pulse-dot 1.4s ease infinite" }} />
+                        <span className="inline-block w-2 h-2 rounded-full bg-cyan-400" style={{ animation:"pulse-dot 1.4s ease infinite 0.2s" }} />
+                        <span className="inline-block w-2 h-2 rounded-full bg-cyan-400" style={{ animation:"pulse-dot 1.4s ease infinite 0.4s" }} />
+                      </span>
+                      {loadingText}
+                    </div>
+                  </div>
+                )}
+
+                <div ref={bottomRef} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── input bar ── */}
+        <div className="relative z-10 px-4 pb-5 pt-2">
+          <div className="max-w-2xl mx-auto rounded-2xl p-3 flex items-end gap-3" style={dark ? inputBarDark : inputBarLight}>
+            {tripGenerated ? (
+              <p className={`w-full text-center text-sm py-1 ${dark ? "text-gray-500" : "text-gray-400"}`}>
+                🎉 Trip planning complete! Refresh to plan a new trip.
+              </p>
+            ) : (
+              <>
+                <Textarea
+                  value={userInput}
+                  onChange={e => setUserInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend() } }}
+                  placeholder="Ask me about your trip…"
+                  disabled={isLoading}
+                  rows={1}
+                  className={`flex-1 resize-none bg-transparent border-0 shadow-none focus-visible:ring-0
+                    text-sm leading-relaxed min-h-0
+                    ${dark ? "text-gray-100 placeholder-gray-500" : "text-gray-800 placeholder-gray-400"}`}
+                  style={{ outline:"none" }}
+                />
+                <button
+                  onClick={() => onSend()}
+                  disabled={isLoading || !userInput.trim()}
+                  className="flex-shrink-0 w-10 h-10 rounded-xl text-white flex items-center justify-center
+                             shadow-md transition-all duration-200 disabled:opacity-35 hover:scale-105 active:scale-95"
+                  style={{ background:"linear-gradient(135deg,#06b6d4,#14b8a6)", boxShadow:"0 2px 10px rgba(6,182,212,.35)" }}
+                >
+                  <Send size={18} />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+    </>
   )
 }
