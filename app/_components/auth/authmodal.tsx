@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabase"
 import { useState } from "react"
 import { Github } from "lucide-react"
-import { MagicCard } from "@/components/ui/magic-card"
+// ✅ Remove MagicCard import
 
 export default function AuthModal() {
   const { showAuthModal, closeAuthModal } = useAuthStore()
@@ -59,17 +59,18 @@ export default function AuthModal() {
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="w-full max-w-md group hover:scale-[1.01] transition-transform"
+            className="w-full max-w-md"
           >
-            {/* MagicCard — hover only */}
-            <MagicCard
+            {/* ✅ Replace MagicCard with regular div */}
+            <div
               className="
-                 p-6 rounded-2xl
-    bg-white dark:bg-zinc-900
-    border border-zinc-200 dark:border-zinc-800
-    shadow-lg dark:shadow-black/30
-    transition-all
-    group-hover:border-pink-500/40
+                p-6 rounded-2xl
+                bg-white dark:bg-zinc-900
+                border border-zinc-200 dark:border-zinc-800
+                shadow-lg dark:shadow-black/30
+                transition-all
+                hover:border-pink-500/40
+                hover:shadow-xl
               "
             >
               <h2 className="text-xl font-semibold mb-4">
@@ -130,7 +131,7 @@ export default function AuthModal() {
                   ? "Create an account"
                   : "Already have an account?"}
               </button>
-            </MagicCard>
+            </div>
           </motion.div>
         </motion.div>
       )}

@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation" // ✅ Added
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { ArrowDown, Globe2, Landmark, Plane, Send } from "lucide-react"
@@ -20,11 +21,19 @@ const suggestions = [
 ]
 
 const Hero = () => {
-  const { user } = useAuthStore()
+  const { user, openAuthModal } = useAuthStore() // ✅ Added openAuthModal
+  const searchParams = useSearchParams() // ✅ Added
   const router = useRouter()
   const [inputValue, setInputValue] = useState("")
   const [profile, setProfile] = useState<{ full_name?: string } | null>(null)
   const [loadingProfile, setLoadingProfile] = useState(true)
+
+  // ✅ Auto-open auth modal if redirected from protected route
+  useEffect(() => {
+    if (searchParams.get('auth') === 'signup') {
+      openAuthModal()
+    }
+  }, [searchParams, openAuthModal])
 
   // Fetch profile when user is available
   useEffect(() => {
