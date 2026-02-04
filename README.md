@@ -99,55 +99,7 @@ Supabase uses **Row Level Security (RLS)** so:
 
 ---
 
-## 🌍 Deploying to Vercel
 
-### 1️⃣ Add Environment Variables
-
-Vercel Dashboard → Project → Settings → Environment Variables
-
-Add:
-
-```txt
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-```
-
----
-
-### 2️⃣ Supabase Auth Settings
-
-Supabase Dashboard → Authentication → URL Configuration
-
-**Site URL:**
-
-```
-https://your-project-name.vercel.app
-```
-
-**Redirect URLs:**
-
-```
-https://your-project-name.vercel.app/**
-http://localhost:3000/**
-```
-
----
-
-### 3️⃣ Deploy
-
-Push to GitHub → Import repo into Vercel → Deploy 🎉
-
----
-
-## ✅ Final Checklist
-
-* [ ] App runs locally
-* [ ] Supabase env vars added
-* [ ] Auth redirect URLs set
-* [ ] Protected routes working
-* [ ] Trips saved per user
-
----
 
 ## 🙌 You’re Done!
 
