@@ -9,17 +9,22 @@ export default function AuthListener() {
 
   useEffect(() => {
     // 1️⃣ Initial session check
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user) {
-        setUser({
-          id: data.session.user.id,
-          email: data.session.user.email ?? null,
-        })
-      } else {
+    supabase.auth.getSession()
+      .then(({ data }) => {
+        if (data.session?.user) {
+          setUser({
+            id: data.session.user.id,
+            email: data.session.user.email ?? null,
+          })
+        } else {
+          logout()
+        }
+        setLoading(false)
+      })
+      .catch(() => {
         logout()
-      }
-      setLoading(false)
-    })
+        setLoading(false)
+      })
 
     // 2️⃣ Auth state changes (login / logout / refresh)
     const {

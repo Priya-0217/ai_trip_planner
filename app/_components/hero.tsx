@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation" // ✅ Added
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
@@ -27,6 +27,7 @@ const Hero = () => {
   const [inputValue, setInputValue] = useState("")
   const [profile, setProfile] = useState<{ full_name?: string } | null>(null)
   const [loadingProfile, setLoadingProfile] = useState(true)
+  const inputRef = useRef<HTMLTextAreaElement | null>(null)
 
   // ✅ Auto-open auth modal if redirected from protected route
   useEffect(() => {
@@ -40,15 +41,10 @@ const Hero = () => {
     if (user) {
       const fetchProfile = async () => {
         setLoadingProfile(true)
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("id", user.id)
-          .single()
-        if (error) {
-          console.error("Failed to fetch profile:", error)
-        } else {
-          setProfile(data)
+        const res = await fetch(`/api/profiles?id=${user.id}`, { cache: "force-cache" })
+        if (res.ok) {
+          const data = await res.json()
+          setProfile({ full_name: data?.full_name })
         }
         setLoadingProfile(false)
       }
@@ -57,7 +53,9 @@ const Hero = () => {
   }, [user])
 
   const handleSendClick = () => {
-    router.push("/create-new-trip")
+    const q = encodeURIComponent(inputValue.trim())
+    const url = q ? `/create-new-trip?query=${q}` : `/create-new-trip`
+    router.push(url)
   }
 
   return (
@@ -101,7 +99,7 @@ const Hero = () => {
             </>
           ) : (
             <TypingAnimation>
-              Hey, I'm your Personal Trip Planner
+              Hey, I’m your Personal Trip Planner
             </TypingAnimation>
           )}
         </motion.h1>
@@ -136,6 +134,7 @@ const Hero = () => {
                   placeholder="Where would you like to go? (e.g., '3 days in Tokyo with budget hotels')"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
+                  ref={inputRef}
                   className="h-32 resize-none border-none bg-transparent focus-visible:ring-0 text-base text-zinc-900 dark:text-zinc-100 placeholder:text-muted-foreground/70 p-0 pr-14"
                 />
 
@@ -160,6 +159,10 @@ const Hero = () => {
                   whileHover={{ scale: 1.08, y: -2 }}
                   whileTap={{ scale: 0.97 }}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-full border bg-white/90 dark:bg-zinc-800/90 border-zinc-200 dark:border-zinc-700 text-sm cursor-pointer transition-all duration-300 hover:border-pink-300 dark:hover:border-pink-500/50 hover:shadow-lg backdrop-blur-sm"
+                  onClick={() => {
+                    setInputValue(s.title)
+                    inputRef.current?.focus()
+                  }}
                 >
                   {s.icon}
                   <span className="text-zinc-800 dark:text-zinc-100 font-medium">{s.title}</span>

@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import React, { useState } from "react";
+import Image from "next/image";
 import "swiper/css";
 import "swiper/css/effect-creative";
 import "swiper/css/pagination";
@@ -130,10 +131,13 @@ const HoverExpand_001 = ({
                   </motion.div>
                 )}
               </AnimatePresence>
-              <img
+              <Image
                 src={image.src}
-                className="size-full object-cover"
                 alt={image.alt}
+                fill
+                sizes="(max-width: 768px) 80vw, 24rem"
+                className="object-cover"
+                loading="lazy"
               />
             </motion.div>
           ))}

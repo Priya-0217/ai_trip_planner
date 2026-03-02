@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 import { Timeline } from "@/components/ui/timeline"
 import { getWikimediaImage } from "@/utils/getWikimediaImage"
+import Image from "next/image"
 
 type Props = {
   trip: any
@@ -185,7 +186,7 @@ const MapTrip = ({ trip }: Props) => {
               <div
                 key={key}
                 onClick={() => setSelectedActivity(key)}
-                className={`group relative rounded-2xl border p-5 cursor-pointer transition-all duration-300 overflow-hidden ${
+                className={`group relative rounded-2xl border p-5 cursor-pointer transition-all duration-300 overflow-visible ${
                   isSelected
                     ? "border-violet-500 bg-gradient-to-br from-violet-50 to-fuchsia-50 dark:from-violet-950/30 dark:to-fuchsia-950/30 shadow-lg shadow-violet-200/50 dark:shadow-violet-900/30 scale-[1.02]"
                     : "border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-violet-300 dark:hover:border-violet-700 hover:shadow-md"
@@ -201,38 +202,35 @@ const MapTrip = ({ trip }: Props) => {
                 </div>
 
                 <div className="pl-6 space-y-3">
-                  {/* Activity Image */}
-                  {(hasImage || isLoadingImage) && (
-                    <div className="relative h-48 rounded-xl overflow-hidden -mx-5 -mt-5 mb-4">
-                      {isLoadingImage ? (
-                        <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center">
-                          <div className="text-center space-y-2">
-                            <ImageIcon size={32} className="mx-auto text-gray-400 animate-pulse" />
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              Loading image...
-                            </p>
-                          </div>
+                  <div className="relative aspect-video rounded-xl overflow-hidden mb-4">
+                    {isLoadingImage ? (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center">
+                        <div className="text-center space-y-2">
+                          <ImageIcon size={32} className="mx-auto text-gray-400 animate-pulse" />
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Loading image...</p>
                         </div>
-                      ) : hasImage ? (
-                        <>
-                          <img
-                            src={activityImages[key]}
-                            alt={act.place_name}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                            loading="lazy"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                          
-                          {/* Place name overlay on image */}
-                          <div className="absolute bottom-4 left-4 right-4">
-                            <h4 className="font-bold text-xl text-white drop-shadow-lg">
-                              {act.place_name}
-                            </h4>
-                          </div>
-                        </>
-                      ) : null}
-                    </div>
-                  )}
+                      </div>
+                    ) : (
+                      <>
+                        <Image
+                          src={
+                            hasImage
+                              ? activityImages[key]
+                              : `https://source.unsplash.com/960x720/?${encodeURIComponent(`${act.place_name} ${trip.destination}`)},travel,landmark`
+                          }
+                          alt={act.place_name}
+                          fill
+                          sizes="(max-width: 640px) 100vw, 700px"
+                          className="object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                          priority={false}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                        <div className="absolute bottom-4 left-4 right-4">
+                          <h4 className="font-bold text-xl text-white drop-shadow-lg">{act.place_name}</h4>
+                        </div>
+                      </>
+                    )}
+                  </div>
 
                   {/* Header (only show if no image) */}
                   {!hasImage && !isLoadingImage && (
@@ -397,18 +395,28 @@ const MapTrip = ({ trip }: Props) => {
                         </div>
                       ) : hasImage ? (
                         <>
-                          <img
+                          <Image
                             src={hotelImages[i]}
                             alt={hotel.hotel_name}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                            loading="lazy"
+                            fill
+                            sizes="(max-width: 640px) 100vw, 320px"
+                            className="object-cover object-center transition-transform duration-500 group-hover:scale-110"
+                            priority={false}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                         </>
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center">
-                          <Hotel size={24} className="text-gray-400" />
-                        </div>
+                        <>
+                          <Image
+                            src={`https://source.unsplash.com/640x480/?${encodeURIComponent(`${hotel.hotel_name} ${trip.destination}`)},hotel`}
+                            alt={hotel.hotel_name}
+                            fill
+                            sizes="(max-width: 640px) 100vw, 320px"
+                            className="object-cover object-center transition-transform duration-500 group-hover:scale-110"
+                            priority={false}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                        </>
                       )}
                       
                       {/* Floating rating badge */}
@@ -478,7 +486,11 @@ const MapTrip = ({ trip }: Props) => {
           </div>
 
           <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-200 dark:border-slate-700 p-6 sm:p-8 shadow-xl shadow-gray-200/50 dark:shadow-none">
-            <Timeline data={timelineData} />
+            <Timeline
+              data={timelineData}
+              title={`Itinerary for ${trip?.destination || "your trip"}`}
+              description={`Duration ${trip?.duration || ""} • Group ${trip?.group_size || ""}`}
+            />
           </div>
         </div>
 

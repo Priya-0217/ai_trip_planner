@@ -2,6 +2,8 @@ export const getWikimediaImage = async (
   query: string
 ): Promise<string | null> => {
   try {
+    const buildUnsplash = (q: string) =>
+      `https://source.unsplash.com/960x720/?${encodeURIComponent(q)},travel,landmark`;
     /* 1️⃣ SEARCH FOR PAGE */
     const searchUrl =
       `https://en.wikipedia.org/w/api.php?` +
@@ -15,7 +17,7 @@ export const getWikimediaImage = async (
     const searchData = await searchRes.json()
 
     const title = searchData?.query?.search?.[0]?.title
-    if (!title) return null
+    if (!title) return buildUnsplash(query)
 
     /* 2️⃣ GET PAGE IMAGE */
     const imageUrl =
@@ -31,11 +33,18 @@ export const getWikimediaImage = async (
     const imageData = await imageRes.json()
 
     const pages = imageData?.query?.pages
-    const page: any = pages && Object.values(pages)[0]
-
-    return page?.thumbnail?.source ?? null
+    const page = pages && Object.values(pages)[0] as { thumbnail?: { source?: string } }
+    const src = page?.thumbnail?.source
+    if (!src) return buildUnsplash(query)
+    const fixed = src.replace(/\)+$/, "")
+    try {
+      const u = new URL(fixed)
+      return u.toString()
+    } catch {
+      return buildUnsplash(query)
+    }
   } catch (err) {
     console.error("Wikimedia error:", err)
-    return null
+    return `https://source.unsplash.com/960x720/?${encodeURIComponent(query)},travel,landmark`
   }
 }

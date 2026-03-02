@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react"
 import { Bot, User, Send, Loader2 } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import axios from "axios"
+import { useSearchParams } from "next/navigation"
 
 import Empty from "./empty"
 import GroupSizeUi from "./groupsizeui"
@@ -111,6 +112,7 @@ export default function ChatBox({ setTripData }: ChatBoxProps) {
   const [dark, setDark]                   = useState(false)
 
   const bottomRef = useRef<HTMLDivElement | null>(null)
+  const searchParams = useSearchParams()
 
   /* detect dark class on <html> */
   useEffect(() => {
@@ -125,6 +127,11 @@ export default function ChatBox({ setTripData }: ChatBoxProps) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, isLoading])
+
+  useEffect(() => {
+    const q = searchParams.get("query")
+    if (q) setUserInput(q)
+  }, [searchParams])
 
   /* ─── send ─── */
   const onSend = async (input?: string) => {

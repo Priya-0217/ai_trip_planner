@@ -15,7 +15,7 @@ const destinations = [
 
 const HoverDestinations = () => {
   return (
-    <section className="mt-28 space-y-6">
+    <section className="mt-28 space-y-6 pb-12">
       <h2 className="text-center text-2xl font-semibold">
         Popular destinations people love
       </h2>
