@@ -9,18 +9,6 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/wikipedia/**",
       },
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-        port: "",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "source.unsplash.com",
-        port: "",
-        pathname: "/**",
-      },
     ],
   },
 };

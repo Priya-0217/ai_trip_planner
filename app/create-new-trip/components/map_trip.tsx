@@ -19,6 +19,7 @@ import {
 import { Timeline } from "@/components/ui/timeline"
 import { getWikimediaImage } from "@/utils/getWikimediaImage"
 import Image from "next/image"
+import { getPlaceholderImage } from "@/utils/placeholderImage"
 
 type Props = {
   trip: any
@@ -46,6 +47,18 @@ const MapTrip = ({ trip }: Props) => {
 
         // Check if image is already in the hotel object (pre-enriched)
         if (hotel.image) {
+          try {
+            const url = new URL(hotel.image)
+            const host = url.hostname
+            // Skip unsupported hosts (e.g., Unsplash) and fetch Wikimedia instead
+            if (host !== "upload.wikimedia.org") {
+              const img = await getWikimediaImage(`${hotel.hotel_name} ${trip.destination}`)
+              setLoadingImages(prev => ({ ...prev, [key]: false }))
+              return { index, image: img }
+            }
+          } catch {
+            // Not a valid URL; fall through to fetch
+          }
           setLoadingImages(prev => ({ ...prev, [key]: false }))
           return { index, image: hotel.image }
         }
@@ -213,11 +226,9 @@ const MapTrip = ({ trip }: Props) => {
                     ) : (
                       <>
                         <Image
-                          src={
-                            hasImage
-                              ? activityImages[key]
-                              : `https://source.unsplash.com/960x720/?${encodeURIComponent(`${act.place_name} ${trip.destination}`)},travel,landmark`
-                          }
+                          src={hasImage
+                            ? activityImages[key]
+                            : getPlaceholderImage(`${act.place_name} ${trip.destination}`, 960, 720)}
                           alt={act.place_name}
                           fill
                           sizes="(max-width: 640px) 100vw, 700px"
@@ -408,7 +419,7 @@ const MapTrip = ({ trip }: Props) => {
                       ) : (
                         <>
                           <Image
-                            src={`https://source.unsplash.com/640x480/?${encodeURIComponent(`${hotel.hotel_name} ${trip.destination}`)},hotel`}
+                            src={getPlaceholderImage(`${hotel.hotel_name} ${trip.destination}`, 640, 480)}
                             alt={hotel.hotel_name}
                             fill
                             sizes="(max-width: 640px) 100vw, 320px"

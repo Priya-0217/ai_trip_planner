@@ -1,9 +1,13 @@
+import { getPlaceholderImage } from "./placeholderImage"
+
 export const getWikimediaImage = async (
   query: string
 ): Promise<string | null> => {
+  // Force local placeholders when network is restricted
+  if (process.env.NEXT_PUBLIC_IMAGE_MODE === "local") {
+    return getPlaceholderImage(query, 960, 720)
+  }
   try {
-    const buildUnsplash = (q: string) =>
-      `https://source.unsplash.com/960x720/?${encodeURIComponent(q)},travel,landmark`;
     /* 1️⃣ SEARCH FOR PAGE */
     const searchUrl =
       `https://en.wikipedia.org/w/api.php?` +
@@ -17,7 +21,7 @@ export const getWikimediaImage = async (
     const searchData = await searchRes.json()
 
     const title = searchData?.query?.search?.[0]?.title
-    if (!title) return buildUnsplash(query)
+    if (!title) return getPlaceholderImage(query, 960, 720)
 
     /* 2️⃣ GET PAGE IMAGE */
     const imageUrl =
@@ -35,16 +39,16 @@ export const getWikimediaImage = async (
     const pages = imageData?.query?.pages
     const page = pages && Object.values(pages)[0] as { thumbnail?: { source?: string } }
     const src = page?.thumbnail?.source
-    if (!src) return buildUnsplash(query)
+    if (!src) return getPlaceholderImage(query, 960, 720)
     const fixed = src.replace(/\)+$/, "")
     try {
       const u = new URL(fixed)
       return u.toString()
     } catch {
-      return buildUnsplash(query)
+      return getPlaceholderImage(query, 960, 720)
     }
   } catch (err) {
     console.error("Wikimedia error:", err)
-    return `https://source.unsplash.com/960x720/?${encodeURIComponent(query)},travel,landmark`
+    return getPlaceholderImage(query, 960, 720)
   }
 }
