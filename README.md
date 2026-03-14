@@ -23,6 +23,8 @@ Welcome! This guide helps you **run, deploy, and use** the AI Trip Planner with 
 
 ---
 
+
+
 ## 🚀 Getting Started (Local Setup)
 
 ### 1️⃣ Clone the Project
