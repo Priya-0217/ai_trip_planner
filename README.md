@@ -13,6 +13,13 @@ Welcome! This guide helps you **run, deploy, and use** the AI Trip Planner with 
 * **Auth & Database:** Supabase
 * **Deployment:** Vercel
 * **Styling:** Tailwind CSS
+
+* <img width="2855" height="1462" alt="Screenshot 2026-03-14 175708" src="https://github.com/user-attachments/assets/2371df9f-9b88-44cb-ba10-fd1681c50f2d" />
+
+<img width="2875" height="1457" alt="Screenshot 2026-03-14 175905" src="https://github.com/user-attachments/assets/ea154036-16de-4ddd-bf02-358b24b11eec" />
+<img width="2839" height="1466" alt="Screenshot 2026-03-14 175731" src="https://github.com/user-attachments/assets/f11b5351-cd68-466a-828b-d84e335384d0" />
+
+
 ---
 ## 🚀 Getting Started (Local Setup)
 ### 1️⃣ Clone the Project
